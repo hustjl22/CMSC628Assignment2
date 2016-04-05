@@ -1,0 +1,56 @@
+{
+  "project_info": {
+    "project_id": "cmsc628assignment2",
+    "project_number": "836803658729",
+    "name": "CMSC628Assignment2"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:836803658729:android:adcb01403b9b3548",
+        "client_id": "android:umbc.cmsc628.assignment2",
+        "client_type": 1,
+        "android_client_info": {
+          "package_name": "umbc.cmsc628.assignment2",
+          "certificate_hash": []
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "836803658729-7r2dmrgf143k4ncgumtlb6i0t2s4skeb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "umbc.cmsc628.assignment2",
+            "certificate_hash": "F629EEB578D60DCC851665D6615697358641C3BA"
+          }
+        },
+        {
+          "client_id": "836803658729-8r7u86hbreknmhrgkoe1ognbgnmeg5it.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "cloud_messaging_service": {
+          "status": 1,
+          "apns_config": []
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "google_signin_service": {
+          "status": 2
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "client_info": [],
+  "ARTIFACT_VERSION": "1"
+}
