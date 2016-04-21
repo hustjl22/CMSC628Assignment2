@@ -7,7 +7,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -15,19 +15,18 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
-import com.google.android.gms.location.places.Places;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
 import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, LocationListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, PlaceSelectionListener {
 
     private static final String TAG = MapsActivity.class.getName();
     private static final int MY_PERMISSIONS_GET_FINE_LOCATION = 0;
@@ -36,39 +35,31 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap mMap;
     private LocationManager locationManager;
     private GoogleApiClient googleApiClient;
-    private Location lastKnownLcation;
+    private Location lastKnownLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        MapFragment mapFragment = (MapFragment) getFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
         if (googleApiClient == null) {
-            googleApiClient = new GoogleApiClient.Builder(this)
+            googleApiClient = new GoogleApiClient
+                    .Builder(this)
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
                     .addApi(LocationServices.API)
-                    .addApi(Places.GEO_DATA_API)
-                    .addApi(Places.PLACE_DETECTION_API)
+                    //.addApi(Places.GEO_DATA_API)
+                    //.addApi(Places.PLACE_DETECTION_API)
+                    //.enableAutoManage(this, this)
                     .build();
         }
 
         PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-            @Override
-            public void onPlaceSelected(Place place) {
-                Log.i(TAG, "Place: " + place.getName());
-            }
-
-            @Override
-            public void onError(Status status) {
-                Log.e(TAG, "An error occurred: " + status);
-            }
-        });
+        autocompleteFragment.setOnPlaceSelectedListener(this);
     }
 
     @Override
@@ -184,17 +175,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        lastKnownLcation = LocationServices.FusedLocationApi.getLastLocation(
+        lastKnownLocation = LocationServices.FusedLocationApi.getLastLocation(
                 googleApiClient);
-        if (lastKnownLcation != null) {
-            double latitude = lastKnownLcation.getLatitude();
-            double longitude = lastKnownLcation.getLongitude();
+        if (lastKnownLocation != null) {
+            double latitude = lastKnownLocation.getLatitude();
+            double longitude = lastKnownLocation.getLongitude();
+            Log.d(TAG, "Last known location lat = " + Double.toString(latitude) + " long = " + Double.toString(longitude));
             LatLng lastLatLng = new LatLng(latitude, longitude);
 
             setMarkerOnLocation(lastLatLng);
 
             CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(lastLatLng, ZOOM_LEVEL);
             mMap.animateCamera(cameraUpdate);
+        } else {
+            Log.e(TAG, "Could not get last known location");
         }
     }
 
@@ -214,5 +208,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         markerOptions.draggable(true);
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE));
         mMap.addMarker(markerOptions);
+    }
+
+    @Override
+    public void onPlaceSelected(Place place) {
+        Log.i(TAG, "Place: " + place.getName());
+        LatLng placeLatLng = place.getLatLng();
+        // TODO Do something with placeLatLng
+    }
+
+    @Override
+    public void onError(Status status) {
+        Log.e(TAG, "An error occurred " + status);
     }
 }
