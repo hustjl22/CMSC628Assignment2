@@ -2,6 +2,7 @@ package umbc.cmsc628.assignment2;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -9,6 +10,7 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -23,7 +25,10 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, PlaceSelectionListener {
@@ -31,7 +36,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final String TAG = MapsActivity.class.getName();
     private static final int MY_PERMISSIONS_GET_FINE_LOCATION = 0;
     private static final int ZOOM_LEVEL = 15;
+    private static final int GEOFENCE_RADIUS = 200;
 
+
+    private boolean insideRadius;
+    private LatLng placeLatLng;
     private GoogleMap mMap;
     private LocationManager locationManager;
     private GoogleApiClient googleApiClient;
@@ -133,18 +142,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onLocationChanged(Location location) {
+        //Clear the map
         mMap.clear();
         Log.d(TAG, "Location changed: lat=" +
                 Double.toString(location.getLatitude()) +
                 " long=" + Double.toString(location.getLatitude()));
-
+        //Set the last known location
+        lastKnownLocation = location;
         LatLng newLocation = new LatLng(location.getLatitude(), location.getLongitude());
-
+        //Add the markers
         setMarkerOnLocation(newLocation);
+        //Only add the place marker and circle if there is a place set
+        if(placeLatLng != null) {
+            setMarkerOnLocation(placeLatLng);
+            setCircle(placeLatLng);
+        }
+        //Move the camera to the new location
+        zoomCamera();
 
-        // Move the camera to the new location
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(newLocation, ZOOM_LEVEL);
-        mMap.animateCamera(cameraUpdate);
+        //Check the distance of the location from the specified place
+        checkDistance();
     }
 
     @Override
@@ -202,6 +219,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    //Set the marker location
     private void setMarkerOnLocation(LatLng loc) {
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(loc);
@@ -210,11 +228,60 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.addMarker(markerOptions);
     }
 
+    //Method to draw a circle for the place
+    private void setCircle(LatLng loc) {
+        CircleOptions circleOptions = new CircleOptions().center(loc).radius(GEOFENCE_RADIUS).fillColor(Color.GREEN).strokeColor(Color.GREEN).strokeWidth(2);
+        mMap.addCircle(circleOptions);
+    }
+
     @Override
     public void onPlaceSelected(Place place) {
         Log.i(TAG, "Place: " + place.getName());
-        LatLng placeLatLng = place.getLatLng();
-        // TODO Do something with placeLatLng
+        //Get the place data
+        placeLatLng = place.getLatLng();
+        //Clear the map and then set the markers and draw the circle
+        mMap.clear();
+        setMarkerOnLocation(new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude()));
+        setMarkerOnLocation(placeLatLng);
+        setCircle(placeLatLng);
+        //Check the distance of the place from the location
+        checkDistance();
+
+        //Zoom the camera
+        zoomCamera();
+
+    }
+
+    public void zoomCamera() {
+        //Zoom camera to show both the place point and the last known location
+        LatLngBounds.Builder bc = new LatLngBounds.Builder();
+        if(lastKnownLocation != null)
+            bc.include(new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude()));
+        if(placeLatLng != null)
+            bc.include(placeLatLng);
+
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(bc.build(), 200);
+        mMap.animateCamera(cameraUpdate);
+    }
+
+
+    public void checkDistance() {
+        float[] distance = new float[2];
+        //Find the distance between the last known location and the place
+        Location.distanceBetween(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude(),
+                placeLatLng.latitude, placeLatLng.longitude, distance);
+        //If this distance greater than the radius, the location is not within the radius
+        if(distance[0] > GEOFENCE_RADIUS) {
+            if(insideRadius)
+                Toast.makeText(getApplicationContext(), "Leaving the 200 meter radius.", Toast.LENGTH_LONG).show();
+            insideRadius = false;
+        }
+        //Otherwise the location is within the radius from the place
+        else {
+            if(!insideRadius)
+                Toast.makeText(getApplicationContext(), "Within the 200 meter radius.", Toast.LENGTH_LONG).show();
+            insideRadius = true;
+        }
     }
 
     @Override
